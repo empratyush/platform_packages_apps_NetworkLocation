@@ -12,49 +12,39 @@ import android.os.Looper
  * The network location service.
  */
 class NetworkLocationService : Service() {
-    private var provider: NetworkLocationProvider? = null
-    private var networkLocationSettingObserver: Any? = null
+
+    private val networkLocationSettingObserver = {
+        networkLocationSettingValue()
+    }
     private var networkLocationSettingValue = {
         val networkLocationSettingValue = networkLocationSetting.get(this)
         val isAllowed =
             networkLocationSettingValue != NetworkLocationSettings.NETWORK_LOCATION_DISABLED
-        if (provider?.isAllowed != isAllowed) {
-            provider?.isAllowed = isAllowed
-            if (provider?.isAllowed == false) {
-                provider?.onSetRequest(ProviderRequest.EMPTY_REQUEST)
+        if (provider.isAllowed != isAllowed) {
+            provider.isAllowed = isAllowed
+            if (!provider.isAllowed) {
+                provider.onSetRequest(ProviderRequest.EMPTY_REQUEST)
             }
         }
         networkLocationSettingValue
     }
+    private val provider: NetworkLocationProvider = NetworkLocationProvider(
+        context = this,
+        networkLocationSettingValue = networkLocationSettingValue
+    )
 
     override fun onBind(intent: Intent?): IBinder? {
-        if (provider == null) {
-            provider = NetworkLocationProvider(
-                context = this,
-                networkLocationSettingValue = networkLocationSettingValue
-            )
-        }
-        if (networkLocationSettingObserver == null) {
-            networkLocationSettingObserver =
-                networkLocationSetting.registerObserver(
-                    this,
-                    Handler(Looper.getMainLooper())
-                ) {
-                    networkLocationSettingValue()
-                }
-        }
+        networkLocationSetting.registerObserver(this,
+            Handler(Looper.getMainLooper())) {
 
-        return provider?.binder
+        }
+        return provider.binder
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        provider?.onSetRequest(ProviderRequest.EMPTY_REQUEST)
-        provider = null
-        networkLocationSettingObserver?.let {
-            networkLocationSetting.unregisterObserver(this, it)
-        }
-        networkLocationSettingObserver = null
+        provider.onSetRequest(ProviderRequest.EMPTY_REQUEST)
+        networkLocationSetting.unregisterObserver(this, networkLocationSettingObserver)
     }
 
     companion object {
