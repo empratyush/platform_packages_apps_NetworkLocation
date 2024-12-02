@@ -28,10 +28,12 @@ class NetworkLocationService : Service() {
         }
         networkLocationSettingValue
     }
-    private val provider: NetworkLocationProvider = NetworkLocationProvider(
-        context = this,
-        networkLocationSettingValue = networkLocationSettingValue
-    )
+    private val provider: NetworkLocationProvider by lazy {
+        NetworkLocationProvider(
+            context = this,
+            networkLocationSettingValue = networkLocationSettingValue
+        )
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         networkLocationSetting.registerObserver(this,
